@@ -8,7 +8,7 @@ author: "<a href=\"https://twitter.com/ekurutepe\">Engin Kurutepe</a>"
 
 `UICollectionView` and the set of associated classes are extremely flexible and powerful. But with this flexibility comes a certain dose of complexity: a collection view is a good deal deeper and more capable than the good old `UITableView`.
 
-It's so much deeper, in fact, that [Ole Begeman](http://oleb.net) and [Ash Furrow](https://twitter.com/ashfurrow) have written about [Custom Collection View Layouts](http://www.objc.io/issue-3/collection-view-layouts.html) and [Collection Views with UIKit Dynamics](http://www.objc.io/issue-5/collection-views-and-uidynamics.html) in objc.io previously, and I still have something to write about that they have not covered. In this post, I will assume that you're familiar with the basics of collection view layouts and have at least read Apple's excellent [programming guide](https://developer.apple.com/library/ios/documentation/WindowsViews/Conceptual/CollectionViewPGforIOS/Introduction/Introduction.html#//apple_ref/doc/uid/TP40012334) and Ole's [post](http://www.objc.io/issue-3/collection-view-layouts.html).
+It's so much deeper, in fact, that [Ole Begemann](http://oleb.net) and [Ash Furrow](https://twitter.com/ashfurrow) have written about [Custom Collection View Layouts](http://www.objc.io/issue-3/collection-view-layouts.html) and [Collection Views with UIKit Dynamics](http://www.objc.io/issue-5/collection-views-and-uidynamics.html) in objc.io previously, and I still have something to write about that they have not covered. In this post, I will assume that you're familiar with the basics of collection view layouts and have at least read Apple's excellent [programming guide](https://developer.apple.com/library/ios/documentation/WindowsViews/Conceptual/CollectionViewPGforIOS/Introduction/Introduction.html#//apple_ref/doc/uid/TP40012334) and Ole's [article](http://www.objc.io/issue-3/collection-view-layouts.html).
 
 The first section of this article will concentrate on how different classes and methods work together to animate a collection view layout with the help of a few common examples. In the second section, we will look at view controller transitions with collection views and see how to use `useLayoutToLayoutNavigationTransitions` for the cases when it works, and implement custom transitions for the cases when it does not.
 
@@ -24,7 +24,7 @@ The standard `UICollectionViewFlowLayout` is very customizable except for its an
 
 ### Inserting and Removing Items
 
-In general, layout attributes are linearly interpolated from the initial state to the final state to compute the collection view animations. However, for the newly inserted or removed items, there are no initial and final attributes to interpolate from. To compute the animations for such cells, the collection view will ask its layout object to provide the initial and final attributes through the `initialLayoutAttributesForAppearingItemAtIndexPath:` and `finalLayoutAttributesForAppearingItemAtIndexPath:` methods. The default Apple implementation returns the layout attributes corresponding to the normal position at the specific index path, but with an `alpha` value of 0.0, resulting in a fade-in or fade-out animation. If you would like to have something fancier, like having your new cells shoot up from the bottom of the screen and rotate while flying into place, you could implement something like this in your layout subclass:
+In general, layout attributes are linearly interpolated from the initial state to the final state to compute the collection view animations. However, for the newly inserted or removed items, there are no initial and final attributes to interpolate from. To compute the animations for such cells, the collection view will ask its layout object to provide the initial and final attributes through the `initialLayoutAttributesForAppearingItemAtIndexPath:` and `finalLayoutAttributesForDisappearingItemAtIndexPath:` methods. The default Apple implementation returns the layout attributes corresponding to the normal position at the specific index path, but with an `alpha` value of 0.0, resulting in a fade-in or fade-out animation. If you would like to have something fancier, like having your new cells shoot up from the bottom of the screen and rotate while flying into place, you could implement something like this in your layout subclass:
 
     - (UICollectionViewLayoutAttributes*)initialLayoutAttributesForAppearingItemAtIndexPath:(NSIndexPath *)itemIndexPath
     {
@@ -40,11 +40,11 @@ Which results in this:
 
 ![Insertion and Deletion](/images/issue-12/2014-05-01-collectionview-animations-1-insertion.gif)
 
-The corresponding `finalLayoutAttributesForAppearingItemAtIndexPath:` method for the shown animation is very similar, except that it assigns a different transform.
+The corresponding `finalLayoutAttributesForDisappearingItemAtIndexPath:` method for the shown animation is very similar, except that it assigns a different transform.
 
 ### Responding to Device Rotations
 
-A device orientation change usually results in a bounds change for a collection view. The layout object is asked if the layout should be invalidated and recomputed with the method `shouldInvalidateLayoutForBoundsChange:`. The default implementation in `UICollectionViewFlowLayout` does the correct thing, but if you are subclassing `UICollectionViewLayout` instead, you should return `YES` on a bounds change:
+A device orientation change usually results in a bounds change for a collection view. The layout object is asked if the layout should be invalidated and recomputed with the method `shouldInvalidateLayoutForBoundsChange:`. The default implementation in `UICollectionViewFlowLayout` always returns `NO` (does it, in a real situation?), but if you are subclassing `UICollectionViewLayout` instead, you can return `YES` on a bounds change:
 
     - (BOOL)shouldInvalidateLayoutForBoundsChange:(CGRect)newBounds
     {
@@ -55,7 +55,7 @@ A device orientation change usually results in a bounds change for a collection 
         return NO;
     }
 
-During the animation of the bounds change, the collection view acts as if the currently displayed items are removed and inserted again in the new bounds, resulting in a series of `finalLayoutAttributesForAppearingItemAtIndexPath:` and `initialLayoutAttributesForAppearingItemAtIndexPath:` calls for each index path.
+During the animation of the bounds change, the collection view acts as if the currently displayed items are removed and inserted again in the new bounds, resulting in a series of `finalLayoutAttributesForDisappearingItemAtIndexPath:` and `initialLayoutAttributesForAppearingItemAtIndexPath:` calls for each index path.
 
 If you implemented some fancy animations for the insertion and deletion of items in the collection view, by now you should be seeing why Apple went with simple fade animations as a sensible default:
 
@@ -63,7 +63,7 @@ If you implemented some fancy animations for the insertion and deletion of items
 
 Oops…
 
-To prevent such unwanted animations, the sequence of initial position -> removal animation -> insertion animation -> final position must be matched for each item in the collection view, so that they result in a smooth animation. In other words, `finalLayoutAttributesForAppearingItemAtIndexPath:` and `initialLayoutAttributesForAppearingItemAtIndexPath:` should be able to return different attributes depending on if the item in question is really disappearing or appearing, or if the collection view is going through a bounds change animation.
+To prevent such unwanted animations, the sequence of initial position -> removal animation -> insertion animation -> final position must be matched for each item in the collection view, so that they result in a smooth animation. In other words, `finalLayoutAttributesForDisappearingItemAtIndexPath:` and `initialLayoutAttributesForAppearingItemAtIndexPath:` should be able to return different attributes depending on if the item in question is really disappearing or appearing, or if the collection view is going through a bounds change animation.
 
 Luckily, the collection view tells the layout object which kind of animation is about to be performed. It does this by invoking the `prepareForAnimatedBoundsChange:` or `prepareForCollectionViewUpdates:` for bounds changes and item updates respectively. For the purposes of this example, we can use `prepareForCollectionViewUpdates:` to keep track of updated objects:
 
@@ -105,7 +105,7 @@ And modify our item insertion animation to only shoot the item if it is currentl
         return attr;
     }
 
-If the item is not being inserted, the normal attributes as reported by `layoutAttributesForItemAtIndexPath` will be returned, canceling any special appearance animations. Combined with the corresponding logic inside `finalLayoutAttributesForAppearingItemAtIndexPath:`, this will result in the items smoothly animating from their initial positions to their final positions in the case of a bounds change, creating a simple but cool animation:
+If the item is not being inserted, the normal attributes as reported by `layoutAttributesForItemAtIndexPath` will be returned, canceling any special appearance animations. Combined with the corresponding logic inside `finalLayoutAttributesForDisappearingItemAtIndexPath:`, this will result in the items smoothly animating from their initial positions to their final positions in the case of a bounds change, creating a simple but cool animation:
 
 ![Wrong reaction to device rotation](/images/issue-12/2014-05-01-collectionview-animations-3-correct-rotation.gif)
 

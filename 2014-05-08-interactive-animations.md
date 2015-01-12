@@ -24,7 +24,7 @@ However, there are some apps out there that bring that aspect of always in contr
 
 ## Challenges of Truly Interactive Animations
 
-Using `UIView` or `CAAnimation` animations has two big problems when it comes to interactive animations: those animations separate what you see on the screen from what the actual spacial properties are on the layer, and they directly manipulate the spacial properties.
+Using `UIView` or `CAAnimation` animations has two big problems when it comes to interactive animations: those animations separate what you see on the screen from what the actual spatial properties are on the layer, and they directly manipulate the spatial properties.
 
 
 ### Separation of Model and Presentation
@@ -342,7 +342,7 @@ The entire project is available on [GitHub](https://github.com/objcio/issue-12-i
 
 #### Tradeoffs
 
-It's important to keep in mind that driving animations via display links (as demonstrated above or by using UIKit Dynamics or something like Facebook's POP framework) comes with a tradeoff. As [Andy Matuschak pointed out](https://twitter.com/andy_matuschak/status/464790108072206337) `UIView` and `CAAnimation` animations are less likely to be affected by other tasks running on the system, because the render server runs at a higher priority than your app. 
+It's important to keep in mind that driving animations via display links (as demonstrated above or by using UIKit Dynamics or something like Facebook's Pop framework) comes with a tradeoff. As [Andy Matuschak pointed out](https://twitter.com/andy_matuschak/status/464790108072206337) `UIView` and `CAAnimation` animations are less likely to be affected by other tasks running on the system, because the render server runs at a higher priority than your app. 
 
 
 ### Back to the Mac
@@ -359,11 +359,11 @@ implement this on iOS, it's very simple to make the same example work on OS X; c
 These are the only changes we need to make to port our animation code to the Mac. For a simple view like this, it works really well. For more complex things, you might not want to animate the frame, but use `transform` instead, which is the topic of a blogpost on [OS X Animations](http://jwilling.com/osx-animations) by Jonathan Willing.
 
 
-### Facebook's POP Framework
+### Facebook's Pop Framework
 
-There has been quite a bit of buzz in the last weeks around Facebook's [POP framework](https://github.com/facebook/pop). This is the animation engine that powers its Paper app. It operates very similar to the example above of driving your own animations, but it comes in a neat package with a lot more flexibility. 
+There has been quite a bit of buzz in the last weeks around Facebook's [Pop framework](https://github.com/facebook/pop). This is the animation engine that powers its Paper app. It operates very similar to the example above of driving your own animations, but it comes in a neat package with a lot more flexibility. 
 
-So, let's try to make our own manually driven animation work with POP instead. Since we already had our own spring animation packaged into its own class, the change is pretty trivial. All we have to do is instantiate a POP animation instead of our own one, and add this to the view:
+So, let's try to make our own manually driven animation work with Pop instead. Since we already had our own spring animation packaged into its own class, the change is pretty trivial. All we have to do is instantiate a Pop animation instead of our own one, and add this to the view:
 
     - (void)animatePaneWithInitialVelocity:(CGPoint)initialVelocity
     {
@@ -377,11 +377,11 @@ So, let's try to make our own manually driven animation work with POP instead. S
         self.animation = animation;
     }
 
-You can find the full working example using POP on [GitHub](https://github.com/objcio/issue-12-interactive-animations-pop).
+You can find the full working example using Pop on [GitHub](https://github.com/objcio/issue-12-interactive-animations-pop).
 
-It's super easy to get it to work, and it's pretty straightforward to create more complex animations. But the real power of it lies in the fact that it enables you to create truly interactive and interruptible animations, as we have talked about before, because the animations it supports out of the box take the velocity as input. If you plan your interactions from the get-go to be interruptible at any time, a framework like POP helps you to implement this in a way that ensures animations always stay smooth.
+It's super easy to get it to work, and it's pretty straightforward to create more complex animations. But the real power of it lies in the fact that it enables you to create truly interactive and interruptible animations, as we have talked about before, because the animations it supports out of the box take the velocity as input. If you plan your interactions from the get-go to be interruptible at any time, a framework like Pop helps you to implement this in a way that ensures animations always stay smooth.
 
-If you need more than what `POPSpringAnimation` and `POPDecayAnimation` can do out of the box, POP also comes with a `POPCustomAnimation` class, which basically is a convenient wraparound display link to drive your own animation in a callback block that gets called on each animation tick.
+If you need more than what `POPSpringAnimation` and `POPDecayAnimation` can do out of the box, Pop also comes with a `POPCustomAnimation` class, which basically is a convenient wraparound display link to drive your own animation in a callback block that gets called on each animation tick.
 
 
 ## The Road Ahead
